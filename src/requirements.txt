@@ -1,4 +1,4 @@
-tensorflow==2.12.0
+tensorflow
 seaborn==0.12.2
-scikit-learn==1.3.0
+scikit-learn
 opencv-python==4.8.0.74
