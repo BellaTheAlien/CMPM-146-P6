@@ -1,5 +1,5 @@
 from config import BOARD_SIZE, categories, image_size
-from tensorflow.keras import models
+from tensorflow.keras.models import load_model
 import numpy as np
 import tensorflow as tf
 
@@ -107,8 +107,78 @@ class UserWebcamPlayer:
         # The classification value should be 0, 1, or 2 for neutral, happy or surprise respectively
 
         # return an integer (0, 1 or 2), otherwise the code will throw an error
-        return 1
-        pass
+        if not hasattr(self, '_emotion_model'):
+            model_paths = [
+                'results/hpo_best_trial_1_baseline_1771332002.keras',
+                'model.keras',
+            ]
+            loaded_model = None
+            for path in model_paths:
+                try:
+                    loaded_model = load_model(path)
+                    break
+                except Exception:
+                    continue
+
+            if loaded_model is None:
+                raise FileNotFoundError('Cannot find a .keras model')
+
+            self._emotion_model = loaded_model
+
+        if img is None:
+            raise ValueError('No image captured from webcam')
+
+        frame = np.asarray(img)
+
+        if not hasattr(self, '_face_detector'):
+            cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            self._face_detector = cv2.CascadeClassifier(cascade_path)
+
+        if len(frame.shape) == 3:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = frame
+
+        detected_faces = self._face_detector.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(48, 48)
+        )
+
+        if len(detected_faces) > 0:
+            x, y, w, h = max(detected_faces, key=lambda face: face[2] * face[3])
+            face_crop = gray[y:y + h, x:x + w]
+        else:
+            face_crop = gray
+
+        tensor_img = tf.convert_to_tensor(face_crop, dtype=tf.float32)
+
+        if len(tensor_img.shape) == 2:
+            tensor_img = tf.expand_dims(tensor_img, axis=-1)
+        elif len(tensor_img.shape) != 3:
+            raise ValueError('Unexpected image shape: {}'.format(tensor_img.shape))
+
+        resized = tf.image.resize(tensor_img, image_size)
+        if resized.shape[-1] == 1:
+            resized_rgb = tf.image.grayscale_to_rgb(resized)
+        else:
+            resized_rgb = resized[..., :3]
+
+        batch = tf.expand_dims(resized_rgb, axis=0)
+
+        prediction = self._emotion_model.predict(batch, verbose=0)
+        predicted_idx = int(np.argmax(prediction, axis=-1)[0])
+
+        if not hasattr(self, '_label_remap'):
+            model_label_order = ['happy', 'neutral', 'surprise']
+            self._label_remap = {
+                model_idx: categories.index(label)
+                for model_idx, label in enumerate(model_label_order)
+            }
+
+        emotion = int(self._label_remap.get(predicted_idx, predicted_idx))
+        return emotion
     
     def get_move(self, board_state):
         row, col = None, None

@@ -1,0 +1,9 @@
+.venv/
+.venv310/
+venv/
+env/
+mynev/
+src/mynev/
+.vscode/
+__pycache__/
+*.pyc

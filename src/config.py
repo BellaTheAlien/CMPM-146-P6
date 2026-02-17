@@ -1,7 +1,10 @@
+from pathlib import Path
+
 categories = ['neutral', 'happy', 'surprise']
 
-train_directory = 'train'
-test_directory = 'test'
+_BASE_DIR = Path(__file__).resolve().parent
+train_directory = str(_BASE_DIR / 'train')
+test_directory = str(_BASE_DIR / 'test')
 
 train_size = 5000
 original_image_size = (48, 48)
