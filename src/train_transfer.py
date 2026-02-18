@@ -6,9 +6,10 @@ import matplotlib.pyplot as plt
 import time
 
 # Your code should change these values based on your choice of dataset for the transfer task
+# 2 categories for cat and dog dataset
 # -------------
 input_shape = (image_size[0], image_size[1], 3)
-categories_count = 3
+categories_count = 2
 # -------------
 
 models = {
